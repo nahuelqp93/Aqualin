@@ -1,0 +1,146 @@
+.board {
+  --cell: 56px;
+  --gap: 10px;
+  --inset: 0px;
+
+  width: calc(6 * var(--cell) + 5 * var(--gap) + 2 * var(--inset));
+  height: calc(6 * var(--cell) + 5 * var(--gap) + 2 * var(--inset));
+  padding: var(--inset);
+
+  display: grid;
+  grid-template-columns: repeat(6, var(--cell));
+  gap: var(--gap);
+
+  background-image: url('../../../ui/img/tablero.png');
+  background-size: 100% 100%;
+  background-position: center;
+  background-repeat: no-repeat;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+.cellButton {
+  width: var(--cell, 56px);
+  height: var(--cell, 56px);
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.cellFrame {
+  width: var(--cell, 56px);
+  height: var(--cell, 56px);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(0, 0, 0, 0.15);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.25),
+    0 2px 8px rgba(0, 0, 0, 0.25);
+  display: grid;
+  place-items: center;
+}
+
+.cellFrameEmpty {
+  opacity: 0.55;
+}
+
+.cellFrameSelectedFrom {
+  outline: 3px solid rgba(255, 255, 255, 0.8);
+  outline-offset: 2px;
+}
+
+.cellFrameSelectedTo {
+  outline: 3px solid rgba(150, 255, 150, 0.9);
+  outline-offset: 2px;
+}
+
+.cellFrameSelectedPlacement {
+  outline: 3px solid rgba(150, 200, 255, 0.9);
+  outline-offset: 2px;
+}
+
+.cellFrameLegalMove {
+  outline: 2px dashed rgba(200, 255, 200, 0.85);
+  outline-offset: 2px;
+}
+
+.cellFrameHint {
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: translateY(0);
+    box-shadow:
+      inset 0 2px 0 rgba(255, 255, 255, 0.2),
+      inset 0 -2px 0 rgba(0, 0, 0, 0.25),
+      0 2px 8px rgba(0, 0, 0, 0.25);
+  }
+  50% {
+    transform: translateY(-1px);
+    box-shadow:
+      inset 0 2px 0 rgba(255, 255, 255, 0.25),
+      inset 0 -2px 0 rgba(0, 0, 0, 0.25),
+      0 6px 16px rgba(0, 0, 0, 0.28);
+  }
+  100% {
+    transform: translateY(0);
+    box-shadow:
+      inset 0 2px 0 rgba(255, 255, 255, 0.2),
+      inset 0 -2px 0 rgba(0, 0, 0, 0.25),
+      0 2px 8px rgba(0, 0, 0, 0.25);
+  }
+}
+
+.tile {
+  width: calc(var(--cell, 56px) - 12px);
+  height: calc(var(--cell, 56px) - 12px);
+  border-radius: 10px;
+  clip-path: inset(3px round 10px);
+  background-image: url('../../../ui/img/piezas.png');
+  background-repeat: no-repeat;
+  background-size: 600% 600%;
+  background-position: calc(var(--col) * 20%) calc(var(--row) * 20%);
+  box-shadow:
+    0 6px 12px rgba(0, 0, 0, 0.24);
+}
+
+.offer {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.offerButton {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.offerFrame {
+  width: 56px;
+  height: 56px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: linear-gradient(180deg, rgba(34, 92, 160, 1), rgba(14, 56, 120, 1));
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.25),
+    0 2px 8px rgba(0, 0, 0, 0.25);
+  display: grid;
+  place-items: center;
+}
+
+.offerFrameSelected {
+  outline: 3px solid rgba(255, 255, 255, 0.8);
+  outline-offset: 2px;
+}
+
+.offerFrameHint {
+  outline: 2px dashed rgba(255, 255, 255, 0.75);
+  outline-offset: 2px;
+  animation: pulse 1.2s ease-in-out infinite;
+}
+

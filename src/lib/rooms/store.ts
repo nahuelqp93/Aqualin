@@ -18,8 +18,8 @@ function roomKey(code: RoomCode): string {
 function hasKvEnv(): boolean {
   return Boolean(
     process.env.KV_REST_API_URL &&
-      process.env.KV_REST_API_TOKEN &&
-      process.env.KV_URL,
+    process.env.KV_REST_API_TOKEN &&
+    process.env.KV_URL,
   );
 }
 
@@ -28,6 +28,13 @@ function hasUpstashEnv(): boolean {
 }
 
 function getGlobalMemoryStore(): Map<string, AqualinRoomState> {
+  if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
+    console.warn(
+      '⚠️ [AQUALIN] Usando memoryStore en producción/Vercel. ' +
+      'Las salas se perderán cuando la instancia se reinicie. ' +
+      'Configurá UPSTASH_REDIS o Vercel KV para persistencia real.',
+    );
+  }
   const g = globalThis as unknown as { __aqualinRooms?: Map<string, AqualinRoomState> };
   if (!g.__aqualinRooms) g.__aqualinRooms = new Map();
   return g.__aqualinRooms;
@@ -71,11 +78,42 @@ function kvStore(): RoomStore {
     async updateRoom(code, updater) {
       const { kv } = await import('@vercel/kv');
       const key = roomKey(code);
-      const current = await kv.get<AqualinRoomState>(key);
-      if (!current) throw new Error('Room not found');
-      const next = updater(current);
-      await kv.set(key, next);
-      return next;
+
+      for (let i = 0; i < 5; i++) {
+        const current = await kv.get<AqualinRoomState>(key);
+        if (!current) throw new Error('Room not found');
+
+        const next = updater({ ...current });
+        const lastUpdateAt = current.updatedAt;
+        next.updatedAt = Date.now();
+
+        // Atomic Check-and-Set using Lua
+        const script = `
+          local current = redis.call('get', KEYS[1])
+          if not current then return -1 end
+          local decoded = cjson.decode(current)
+          if tonumber(decoded.updatedAt) == tonumber(ARGV[1]) then
+            redis.call('set', KEYS[1], ARGV[2])
+            return 1
+          else
+            return 0
+          end
+        `;
+
+        const result = await (kv.eval as any)(
+          script,
+          [key],
+          [String(lastUpdateAt), JSON.stringify(next)],
+        );
+
+        if (result === 1) return next;
+        if (result === -1) throw new Error('Room disappeared during update');
+
+        // Conflict - retry after small delay
+        await new Promise((r) => setTimeout(r, 50 * (i + 1)));
+      }
+
+      throw new Error('Too many conflicts updating room');
     },
   };
 }
@@ -99,12 +137,41 @@ function upstashStore(): RoomStore {
       const { Redis } = await import('@upstash/redis');
       const redis = Redis.fromEnv();
       const key = roomKey(code);
-      const raw = await redis.get<string>(key);
-      if (!raw) throw new Error('Room not found');
-      const current = JSON.parse(raw) as AqualinRoomState;
-      const next = updater(current);
-      await redis.set(key, JSON.stringify(next));
-      return next;
+
+      for (let i = 0; i < 5; i++) {
+        const raw = await redis.get<string>(key);
+        if (!raw) throw new Error('Room not found');
+        const current = typeof raw === 'string' ? JSON.parse(raw) as AqualinRoomState : raw as AqualinRoomState;
+
+        const next = updater({ ...current });
+        const lastUpdateAt = current.updatedAt;
+        next.updatedAt = Date.now();
+
+        const script = `
+          local current = redis.call('get', KEYS[1])
+          if not current then return -1 end
+          local decoded = cjson.decode(current)
+          if tonumber(decoded.updatedAt) == tonumber(ARGV[1]) then
+            redis.call('set', KEYS[1], ARGV[2])
+            return 1
+          else
+            return 0
+          end
+        `;
+
+        const result = await (redis.eval as any)(
+          script,
+          [key],
+          [String(lastUpdateAt), JSON.stringify(next)],
+        );
+
+        if (result === 1) return next;
+        if (result === -1) throw new Error('Room disappeared during update');
+
+        await new Promise((r) => setTimeout(r, 50 * (i + 1)));
+      }
+
+      throw new Error('Too many conflicts updating room');
     },
   };
 }

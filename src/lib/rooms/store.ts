@@ -29,10 +29,23 @@ function hasUpstashEnv(): boolean {
 
 function getGlobalMemoryStore(): Map<string, AqualinRoomState> {
   if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
+    const missingKv = [
+      !process.env.KV_REST_API_URL && 'KV_REST_API_URL',
+      !process.env.KV_REST_API_TOKEN && 'KV_REST_API_TOKEN',
+      !process.env.KV_URL && 'KV_URL',
+    ].filter(Boolean);
+
+    const missingUpstash = [
+      !process.env.UPSTASH_REDIS_REST_URL && 'UPSTASH_REDIS_REST_URL',
+      !process.env.UPSTASH_REDIS_REST_TOKEN && 'UPSTASH_REDIS_REST_TOKEN',
+    ].filter(Boolean);
+
     console.warn(
       '⚠️ [AQUALIN] Usando memoryStore en producción/Vercel. ' +
       'Las salas se perderán cuando la instancia se reinicie. ' +
-      'Configurá UPSTASH_REDIS o Vercel KV para persistencia real.',
+      'Faltan variables: ' +
+      (missingKv.length > 0 ? `[KV: ${missingKv.join(', ')}] ` : '') +
+      (missingUpstash.length > 0 ? `[Upstash: ${missingUpstash.join(', ')}]` : ''),
     );
   }
   const g = globalThis as unknown as { __aqualinRooms?: Map<string, AqualinRoomState> };
